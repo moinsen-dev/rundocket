@@ -1,0 +1,6 @@
+// !$*UTF8*$!
+{
+  buildSettings = {
+    SDKROOT = iphoneos;
+  };
+}

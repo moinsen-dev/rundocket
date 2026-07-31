@@ -1,0 +1,4 @@
+version:
+  revision: fixture
+  channel: stable
+project_type: app

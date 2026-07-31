@@ -1,0 +1,46 @@
+{
+  "name": "rundocket",
+  "version": "0.0.1",
+  "description": "AI-first, framework-adaptive execution layer for app development.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "rundocket": "./dist/src/cli.js",
+    "rundocket-mcp": "./dist/src/mcp-cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/src/mcp.d.ts",
+      "import": "./dist/src/mcp.js"
+    }
+  },
+  "files": [
+    "dist/src/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/postbuild.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "mcp": "npm run build && node dist/src/mcp-cli.js",
+    "smoke": "npm run build && node dist/src/cli.js inspect test/fixtures/expo-managed --json",
+    "check": "npm run typecheck && npm test && npm run smoke"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "zod": "^4.4.3"
+  }
+}

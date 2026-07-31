@@ -1,0 +1,12 @@
+{
+  "name": "fixture-expo-managed",
+  "private": true,
+  "dependencies": {
+    "expo": "^55.0.0",
+    "react": "^19.0.0",
+    "react-native": "^0.83.0"
+  },
+  "scripts": {
+    "start": "expo start"
+  }
+}
