@@ -26,9 +26,10 @@ one reliable machine contract without framework-specific command knowledge.
 
 - [x] **EXEC-01**: An agent can probe local prerequisites without changing the workspace.
 - [x] **EXEC-02**: An agent can create an immutable plan for a build, test, launch, or log operation.
-- [ ] **EXEC-03**: An agent can apply an approved plan through the selected framework adapter.
+- [x] **EXEC-03**: An agent can apply an approved plan through the selected framework adapter.
 - [ ] **EXEC-04**: An agent receives structured logs, artifacts, duration, commands, and verification results.
 - [x] **EXEC-05**: Evidence becomes stale when relevant source or plan inputs change.
+- [x] **EXEC-06**: An agent learns when a long-running operation finished its work, independently of process exit.
 
 ### Adapters
 
@@ -45,7 +46,7 @@ one reliable machine contract without framework-specific command knowledge.
 ### Integration
 
 - [ ] **INTG-01**: A coding agent can use the complete v1 workflow through the CLI and JSON contract.
-- [ ] **INTG-02**: MCP and Agent Skill integrations remain thin wrappers over the same core contract.
+- [x] **INTG-02**: MCP and Agent Skill integrations remain thin wrappers over the same core contract.
 - [ ] **INTG-03**: The same high-level agent instruction works against native Apple, Flutter, and Expo acceptance fixtures.
 
 ## v2 Requirements
@@ -76,18 +77,19 @@ one reliable machine contract without framework-specific command knowledge.
 |-------------|-------|--------|
 | DISC-01..06 | Phase 1 | Complete |
 | CONT-01..04 | Phase 1 | Complete |
-| EXEC-01..02 | Phase 2 | Complete |
-| EXEC-03..04 | Phase 2 | Pending |
-| EXEC-05 | Phase 2 | Complete |
+| EXEC-01..03 | Phase 2 | Complete |
+| EXEC-04 | Phase 2 | Pending |
+| EXEC-05..06 | Phase 2 | Complete |
 | SAFE-01, SAFE-03 | Phase 2 | Complete |
 | SAFE-02 | Phase 2 | Pending |
 | ADPT-01 | Phase 3 | Pending |
 | ADPT-02..03 | Phase 4 | Pending |
-| INTG-01..03 | Phase 5 | Pending |
+| INTG-01, INTG-03 | Phase 5 | Pending |
+| INTG-02 | Phase 5 | Complete |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 24
+- v1 requirements: 25 total
+- Mapped to phases: 25
 - Unmapped: 0
 
 ---

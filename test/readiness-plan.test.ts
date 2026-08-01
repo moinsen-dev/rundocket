@@ -65,7 +65,7 @@ test("plans are deterministic and source-bound", async () => {
   const first = await planOperation(workspace, "test");
   const second = await planOperation(workspace, "test");
 
-  assert.equal(first.schemaVersion, "rundocket.plan.v1");
+  assert.equal(first.schemaVersion, "rundocket.plan.v2");
   assert.equal(first.status, "VERIFIED");
   assert.match(first.planId ?? "", /^plan_[a-f0-9]{32}$/);
   assert.equal(first.planId, second.planId);
@@ -89,7 +89,11 @@ test("plan reports missing operation inputs without execution", async () => {
   assert.deepEqual(incomplete.requiredInputs, ["platform"]);
   assert.equal(incomplete.execution.availability, "needs_input");
   assert.equal(ios.status, "VERIFIED");
-  assert.equal(ios.execution.availability, "planned");
+  // The fixture carries no installed Expo CLI, so a complete plan still
+  // reports an unavailable toolchain rather than a runnable command.
+  assert.equal(ios.execution.availability, "unavailable");
+  assert.match(ios.execution.reason, /Expo CLI executable is unavailable/);
+  assert.equal(ios.adapter.command, null);
   assert.notEqual(incomplete.planId, ios.planId);
 });
 
@@ -113,6 +117,6 @@ test("doctor and plan CLI commands emit versioned JSON", () => {
   );
   assert.equal(plan.status, 0, plan.stderr);
   const planResult = JSON.parse(plan.stdout) as OperationPlan;
-  assert.equal(planResult.schemaVersion, "rundocket.plan.v1");
+  assert.equal(planResult.schemaVersion, "rundocket.plan.v2");
   assert.equal(planResult.operation, "test");
 });

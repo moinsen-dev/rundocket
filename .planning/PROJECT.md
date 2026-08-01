@@ -22,11 +22,16 @@ machine contract without needing framework-specific command knowledge.
 - ✓ Native Apple, Flutter, and Expo roots are detected from explicit markers — Phase 1
 - ✓ Flutter and Expo retain ownership of embedded Xcode projects — Phase 1
 - ✓ Inspection returns versioned JSON, canonical statuses, stable exit codes, and evidence — Phase 1
+- ✓ A portable Agent Skill delegates to the shared CLI/MCP contract and is
+  discoverable through `npx skills` — Phase 5
+- ✓ A long-running command reports when its work is done rather than when its
+  process exits, and waiting is one call instead of a polling loop — Phase 2
 
 ### Active
 
 - [ ] Expose normalized toolchain capabilities and prerequisite state.
 - [ ] Plan, execute, and verify build, test, launch, and log workflows.
+- [ ] Decide whether managed runs survive the agent session.
 - [ ] Keep destructive, signing, upload, and release actions default-deny.
 - [ ] Remain independent of a particular model, agent runtime, or framework.
 
@@ -72,6 +77,10 @@ thin MCP or Agent Skill integrations.
 | Bootstrap with TypeScript 7 on Node 22 | Fast iteration, strong contracts, and a small official MCP runtime surface | ✓ Good |
 | Use stdio MCP before a local HTTP daemon | Lets the agent own process lifecycle without ports or local auth | ✓ Good |
 | Treat Expo MCP as a provider, not the public contract | Preserves framework-neutral tools and normalizes provider failures | ✓ Good |
+| Publish a model-neutral Agent Skill as a thin integration | Makes the verified workflow installable without duplicating execution logic | ✓ Good |
+| Separate the work lifecycle from the process lifecycle | Development commands finish their work long before they exit, so process exit is not a completion signal | ✓ Good |
+| Make waiting a server-side call instead of agent-side polling | An agent cannot reliably judge from raw output whether a build is still running | ✓ Good |
+| Derive milestone patterns from real command output, not from documentation | The first pass assumed `--no-bundler` terminates and mismatched the install line; the real run disproved both | ✓ Good |
 
 ## Evolution
 
@@ -91,4 +100,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update the current repository context.
 
 ---
-*Last updated: 2026-07-31 during Phase 2 and MCP integration*
+*Last updated: 2026-07-31 during Phase 2 and Agent Skill integration*

@@ -29,6 +29,8 @@ prerequisite probes and evidence lifecycle rules.
 2. Plans bind the selected project, inputs, toolchain, and worktree fingerprint.
 3. Destructive and release-class operations stop before execution.
 4. Applied plans produce fresh, versioned evidence bundles.
+5. A plan declares which milestone means done, and waiting returns on that
+   milestone rather than on process exit.
 
 ## Phase 3: Native Apple adapter
 
@@ -80,10 +82,10 @@ portable integration surfaces.
 | Phase | Status | Progress |
 |-------|--------|----------|
 | 1. Workspace discovery contract | Complete | 100% |
-| 2. Plans, readiness, and evidence kernel | In progress | 70% |
+| 2. Plans, readiness, and evidence kernel | Complete | 100% |
 | 3. Native Apple adapter | Pending | 0% |
-| 4. Flutter and Expo adapters | Pending | 0% |
-| 5. Agent integrations and acceptance | In progress | 45% |
+| 4. Flutter and Expo adapters | In progress | 45% |
+| 5. Agent integrations and acceptance | In progress | 70% |
 
 ## Current evidence
 
@@ -96,5 +98,11 @@ portable integration surfaces.
 - A second real Umkreis acceptance run planned, approved, started, observed,
   evidenced, and cancelled an isolated Expo server without disturbing the
   existing development server.
-- Cross-framework build/test/launch execution, durable cross-session runs, and
-  successful `testID` view lookup remain open gates.
+- A portable `rundocket` Agent Skill is schema-valid, discoverable and
+  installable through `npx skills`, delegates to the shared CLI/MCP contract,
+  and passed an independent read-only Expo ownership/build-boundary exercise.
+- A real `expo run:ios` build against Umkreis reported its `installed` milestone
+  after 14 s through `operation_await` while the process kept running, and the
+  run corrected two wrong assumptions about Expo's output and `--no-bundler`.
+- Native Apple and Flutter execution, Expo Android, durable cross-session runs,
+  and successful `testID` view lookup remain open gates.

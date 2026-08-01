@@ -161,7 +161,7 @@ export function createRunDocketMcpServer(): McpServer {
     {
       title: "Apply approved operation plan",
       description:
-        "Apply a plan registered in this MCP session. Currently limited to verified Expo development-server start.",
+        "Apply a plan registered in this MCP session. Currently limited to verified Expo start, build, launch, and test operations. Follow it with operation_await rather than polling operation_status.",
       inputSchema: z.object({
         planId: z.string().regex(/^plan_[a-f0-9]{32}$/),
         approved: z.boolean().describe("Explicit approval for local mutation."),
@@ -195,6 +195,48 @@ export function createRunDocketMcpServer(): McpServer {
     async ({ runId }) =>
       safeStructuredResult(async () =>
         structuredJson(execution.status(runId)),
+      ),
+  );
+
+  server.registerTool(
+    "operation_await",
+    {
+      title: "Wait for an operation milestone",
+      description:
+        "Block until a managed run reaches its completion milestone, hits a fatal diagnostic, exits, or times out. Development commands such as `expo run:ios` keep a bundler in the foreground after the app is installed, so process exit is not a completion signal; wait on the milestone instead of polling status.",
+      inputSchema: z.object({
+        runId: z.string().regex(/^run_[0-9a-f-]{36}$/),
+        until: z
+          .enum([
+            "completion",
+            "exit",
+            "starting",
+            "resolving",
+            "compiling",
+            "built",
+            "installed",
+            "serving",
+          ])
+          .optional()
+          .describe(
+            "Defaults to `completion`, the milestone the plan declared as done.",
+          ),
+        timeoutMs: z
+          .number()
+          .int()
+          .min(1_000)
+          .max(3_600_000)
+          .optional()
+          .describe("Defaults to 300000."),
+      }),
+      outputSchema: jsonObjectSchema,
+      annotations: readOnlyAnnotations,
+    },
+    async ({ runId, until, timeoutMs }) =>
+      safeStructuredResult(async () =>
+        structuredJson(
+          await execution.awaitRun(runId, compact({ until, timeoutMs })),
+        ),
       ),
   );
 

@@ -40,6 +40,7 @@ test("modern MCP client discovers tools and calls the shared core", async () => 
       "expo_router_sitemap",
       "expo_take_screenshot",
       "operation_apply",
+      "operation_await",
       "operation_cancel",
       "operation_plan",
       "operation_status",
@@ -72,7 +73,7 @@ test("modern MCP client discovers tools and calls the shared core", async () => 
     assert.equal(plan.isError, undefined);
     assert.equal(
       valueAt(plan.structuredContent, "schemaVersion"),
-      "rundocket.plan.v1",
+      "rundocket.plan.v2",
     );
     assert.match(
       String(valueAt(plan.structuredContent, "planId")),

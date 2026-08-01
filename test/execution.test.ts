@@ -58,7 +58,7 @@ test("approved Expo start produces a managed cancellable run with evidence", asy
   );
 
   const evidence = await manager.evidence(started.runId);
-  assert.equal(evidence.schemaVersion, "rundocket.evidence.v1");
+  assert.equal(evidence.schemaVersion, "rundocket.evidence.v2");
   assert.equal(evidence.plan.planId, plan.planId);
   assert.equal(evidence.run.runId, started.runId);
   assert.equal(evidence.freshness.status, "fresh");

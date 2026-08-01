@@ -1,0 +1,4 @@
+interface:
+  display_name: "RunDocket"
+  short_description: "Inspect and operate app projects safely"
+  default_prompt: "Use $rundocket to inspect this app workspace and identify the next verified operation."

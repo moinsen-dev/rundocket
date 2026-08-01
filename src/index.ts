@@ -20,14 +20,31 @@ export {
   type PlanOptions,
 } from "./plan.js";
 export {
+  AWAIT_SCHEMA_VERSION,
   EVIDENCE_SCHEMA_VERSION,
   RUN_SCHEMA_VERSION,
   ExecutionError,
   ExecutionManager,
+  type AwaitOptions,
+  type AwaitOutcome,
+  type AwaitTarget,
+  type RunAwaitResult,
   type RunEvidence,
   type RunSnapshot,
   type RunState,
 } from "./execution.js";
+export {
+  MILESTONE_ORDER,
+  SIGNALS_SCHEMA_VERSION,
+  classifyLine,
+  signalContract,
+  signalsFor,
+  type DiagnosticRecord,
+  type MilestoneName,
+  type MilestoneRecord,
+  type SignalContract,
+  type SignalDefinition,
+} from "./signals.js";
 export {
   EXPO_TOOL_SCHEMA_VERSION,
   collectExpoLogs,

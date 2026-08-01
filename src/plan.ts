@@ -18,8 +18,13 @@ import type {
 } from "./model.js";
 import { selectPrimaryProject } from "./project-selection.js";
 import { findProjectBinary } from "./process-utils.js";
+import {
+  signalContract,
+  signalsFor,
+  type SignalContract,
+} from "./signals.js";
 
-export const PLAN_SCHEMA_VERSION = "rundocket.plan.v1" as const;
+export const PLAN_SCHEMA_VERSION = "rundocket.plan.v2" as const;
 
 export type OperationName =
   | "start"
@@ -49,6 +54,8 @@ export interface PlannedCommand {
   executable: string;
   args: string[];
   cwd: string;
+  /** Adapter-required environment applied on top of the inherited process env. */
+  env: Record<string, string>;
 }
 
 export interface OperationPlan {
@@ -76,6 +83,12 @@ export interface OperationPlan {
     id: string | null;
     intent: string;
     command: PlannedCommand | null;
+    /**
+     * Completion contract for the planned command. It tells the agent which
+     * milestone marks the work as done and whether the process exits by itself,
+     * so waiting never depends on guessing from raw output.
+     */
+    signals: SignalContract | null;
   };
   execution: {
     availability: CapabilityAvailability;
@@ -130,6 +143,7 @@ export async function planOperation(
         id: null,
         intent: `${operation} the selected app`,
         command: null,
+        signals: null,
       },
       execution: {
         availability:
@@ -164,6 +178,14 @@ export async function planOperation(
     operation,
     parameters,
   );
+  const definition = signalsFor({
+    kind: selected.project.kind,
+    operation,
+  });
+  const signals =
+    definition === null || adapterPlan.command === null
+      ? null
+      : signalContract(definition);
   const toolchain = toolchainSnapshot(doctor);
   const requiredInputs = adapterPlan.requiredInputs;
   const status = requiredInputs.length > 0 ? "NEEDS_INPUT" : "VERIFIED";
@@ -191,6 +213,7 @@ export async function planOperation(
     risk,
     requiredInputs,
     adapter: adapterPlan,
+    signals,
     sourceFingerprint,
     toolchain,
   };
@@ -224,6 +247,7 @@ export async function planOperation(
       id: selected.project.adapter,
       intent: adapterPlan.intent,
       command: adapterPlan.command,
+      signals,
     },
     execution: {
       availability: executionAvailability,
@@ -232,8 +256,15 @@ export async function planOperation(
     },
     sourceFingerprint,
     toolchain,
-    diagnostics: sourceFingerprint.diagnostics,
+    diagnostics: [
+      ...sourceFingerprint.diagnostics,
+      ...(adapterPlan.notes ?? []),
+    ],
   };
+}
+
+function isApplePlatform(platform: string): boolean {
+  return ["ios", "ipa", "macos"].includes(platform);
 }
 
 export function formatOperationPlan(plan: OperationPlan): string {
@@ -259,6 +290,16 @@ export function formatOperationPlan(plan: OperationPlan): string {
       ].join(" ")}`,
     );
   }
+  if (plan.adapter.signals !== null) {
+    lines.push(
+      `Completion: ${plan.adapter.signals.completion} (${
+        plan.adapter.signals.completesOnExit
+          ? "the command exits"
+          : "the process keeps running afterwards"
+      })`,
+      `Milestones: ${plan.adapter.signals.expectedMilestones.join(" -> ")}`,
+    );
+  }
   lines.push(`Reason: ${plan.execution.reason}`);
   return lines.join("\n");
 }
@@ -267,9 +308,22 @@ interface AdapterPlan {
   intent: string;
   command: PlannedCommand | null;
   requiredInputs: string[];
+  notes?: string[] | undefined;
   executionAvailability?: CapabilityAvailability | undefined;
   executionReason?: string | undefined;
 }
+
+const EXPO_PLATFORMS = ["ios", "android"] as const;
+
+/**
+ * CocoaPods under Ruby 3.4+ aborts with an ASCII-8BIT normalization error when
+ * the inherited environment has no UTF-8 locale, which is the common case for
+ * a process spawned by an agent runtime rather than an interactive shell.
+ */
+const APPLE_BUILD_ENV: Record<string, string> = {
+  LANG: "en_US.UTF-8",
+  LC_ALL: "en_US.UTF-8",
+};
 
 async function planForProject(
   project: DetectedProject,
@@ -305,6 +359,7 @@ async function planExpo(
                 executable: expo,
                 args: ["start", "--port", String(port)],
                 cwd: projectRoot,
+                env: { CI: "1" },
               },
         requiredInputs: [],
         executionAvailability:
@@ -316,11 +371,17 @@ async function planExpo(
       };
     }
     case "build":
-      return {
-        intent: "Build the Expo app for a selected local platform.",
-        command: null,
-        requiredInputs: parameters.platform === undefined ? ["platform"] : [],
-      };
+      return planExpoRun(projectRoot, parameters, {
+        noBundler: true,
+        intent:
+          "Build and install the Expo app locally without starting a second development server.",
+      });
+    case "launch":
+      return planExpoRun(projectRoot, parameters, {
+        noBundler: false,
+        intent:
+          "Build, install, and launch the Expo app together with its development server.",
+      });
     case "test": {
       const testScript = await packageScript(projectRoot, "test");
       return {
@@ -332,16 +393,17 @@ async function planExpo(
                 executable: "npm",
                 args: ["test"],
                 cwd: projectRoot,
+                env: { CI: "1" },
               },
         requiredInputs: testScript === null ? ["testCommand"] : [],
+        executionAvailability:
+          testScript === null ? "unavailable" : "available",
+        executionReason:
+          testScript === null
+            ? "The Expo project declares no test script."
+            : "The declared npm test workflow is executable as a managed local process.",
       };
     }
-    case "launch":
-      return {
-        intent: "Build if necessary and launch the Expo app on a selected platform.",
-        command: null,
-        requiredInputs: parameters.platform === undefined ? ["platform"] : [],
-      };
     case "logs":
       return {
         intent: "Collect Expo app logs through the verified local provider.",
@@ -349,6 +411,76 @@ async function planExpo(
         requiredInputs: [],
       };
   }
+}
+
+async function planExpoRun(
+  projectRoot: string,
+  parameters: OperationParameters,
+  options: { noBundler: boolean; intent: string },
+): Promise<AdapterPlan> {
+  const platform = parameters.platform;
+  if (
+    platform === undefined ||
+    !(EXPO_PLATFORMS as readonly string[]).includes(platform)
+  ) {
+    return {
+      intent: options.intent,
+      command: null,
+      requiredInputs: ["platform"],
+      executionAvailability: "needs_input",
+      executionReason: `platform must be one of: ${EXPO_PLATFORMS.join(", ")}.`,
+    };
+  }
+
+  const expo = await findProjectBinary(projectRoot, "expo");
+  const notes: string[] = [];
+  const args = [`run:${platform}`];
+
+  if (parameters.deviceId === undefined) {
+    notes.push(
+      "No deviceId was supplied; Expo selects the target itself, so the evidence cannot bind the run to a device.",
+    );
+  } else {
+    args.push("--device", parameters.deviceId);
+  }
+  if (parameters.configuration !== undefined) {
+    args.push(
+      platform === "ios" ? "--configuration" : "--variant",
+      parameters.configuration,
+    );
+  }
+  if (options.noBundler) {
+    args.push("--no-bundler");
+    notes.push(
+      "--no-bundler suppresses a second development server; the installed app needs a separately running one at runtime.",
+    );
+  }
+  notes.push(
+    "The command keeps running after the app is installed; wait for the completion milestone and cancel the run instead of waiting for process exit.",
+  );
+
+  return {
+    intent: options.intent,
+    command:
+      expo === null
+        ? null
+        : {
+            executable: expo,
+            args,
+            cwd: projectRoot,
+            env:
+              platform === "ios"
+                ? { CI: "1", ...APPLE_BUILD_ENV }
+                : { CI: "1" },
+          },
+    requiredInputs: [],
+    notes,
+    executionAvailability: expo === null ? "unavailable" : "available",
+    executionReason:
+      expo === null
+        ? "The Expo CLI executable is unavailable."
+        : "The local Expo run workflow is executable as a managed local process with a completion contract.",
+  };
 }
 
 function planFlutter(
@@ -376,6 +508,9 @@ function planFlutter(
                 executable: "flutter",
                 args: ["build", parameters.platform],
                 cwd: projectRoot,
+                env: isApplePlatform(parameters.platform)
+                  ? { ...APPLE_BUILD_ENV }
+                  : {},
               },
         requiredInputs: parameters.platform === undefined ? ["platform"] : [],
       };
@@ -386,6 +521,7 @@ function planFlutter(
           executable: "flutter",
           args: ["test"],
           cwd: projectRoot,
+          env: {},
         },
         requiredInputs: [],
       };
@@ -399,6 +535,7 @@ function planFlutter(
               ? ["run"]
               : ["run", "-d", parameters.deviceId],
           cwd: projectRoot,
+          env: { ...APPLE_BUILD_ENV },
         },
         requiredInputs: [],
       };
@@ -412,6 +549,7 @@ function planFlutter(
               ? ["logs"]
               : ["logs", "-d", parameters.deviceId],
           cwd: projectRoot,
+          env: {},
         },
         requiredInputs: [],
       };
@@ -463,6 +601,7 @@ function planXcode(
                   "build",
                 ],
                 cwd: projectRoot,
+                env: {},
               },
         requiredInputs: requiredScheme,
       };
@@ -484,6 +623,7 @@ function planXcode(
                   "test",
                 ],
                 cwd: projectRoot,
+                env: {},
               },
         requiredInputs: [
           ...requiredScheme,

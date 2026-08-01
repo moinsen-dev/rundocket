@@ -9,13 +9,36 @@ The current implementation provides:
 - read-only workspace inspection and project ownership;
 - read-only toolchain, authentication, dev-server, and device readiness;
 - immutable, source-bound plans for build, test, launch, and logs;
-- approval-gated Expo development-server start with run status, cancellation,
-  bounded output, and freshness-aware evidence;
+- a completion contract that tells an agent which milestone means done, so a
+  long build reports finished work instead of an open process;
+- approval-gated Expo start, build, launch, and test as managed local processes
+  with milestone waiting, structured diagnostics, cancellation, bounded output,
+  and freshness-aware evidence;
 - a headless MCP 2026-07-28 stdio server with legacy compatibility;
 - local Expo MCP providers for routes, screenshots, view inspection, and logs.
 
-Execution of build, test, app launch, signing, upload, submission, and release is
-not claimed. UI mutation through Expo `automation_tap` also remains blocked.
+Native Apple and Flutter execution, signing, upload, submission, and release are
+not claimed. Runs do not survive the MCP session. UI mutation through Expo
+`automation_tap` also remains blocked.
+
+## Waiting without guessing
+
+`expo run:ios` builds the app, installs it, launches it, and then keeps Metro in
+the foreground. Its process never exits, so an agent that waits for exit waits
+forever on work that finished minutes ago.
+
+RunDocket separates the work lifecycle from the process lifecycle. Every plan
+declares its completion milestone up front:
+
+```text
+Command preview: expo run:ios --device A6049A0C-…
+Completion: installed (the process keeps running afterwards)
+Milestones: starting -> resolving -> compiling -> built -> installed -> serving
+```
+
+`operation_await` then blocks until that milestone is reached, a fatal
+diagnostic fires, the process exits, or the timeout expires — one call instead of
+a polling loop, and silence is never read as success.
 
 ## Quick start
 
@@ -41,6 +64,32 @@ rundocket mcp
 rundocket-mcp
 ```
 
+## Agent Skill
+
+RunDocket includes a portable Agent Skill for coding agents that support the
+open Agent Skills format. Inspect the available skills without installing:
+
+```bash
+npx skills add moinsen-dev/rundocket --list
+```
+
+Install the RunDocket skill interactively:
+
+```bash
+npx skills add moinsen-dev/rundocket --skill rundocket
+```
+
+For a non-interactive global Codex installation:
+
+```bash
+npx skills add moinsen-dev/rundocket --skill rundocket -g -a codex -y
+```
+
+The skill is a thin, model-neutral workflow over RunDocket; it does not bundle
+or silently install the CLI. It resolves a project-local or `PATH` executable,
+or a built source checkout configured through `RUNDOCKET_CLI` or
+`RUNDOCKET_REPO`.
+
 ## MCP
 
 Build the repository, then configure an MCP client to launch the absolute
@@ -65,6 +114,7 @@ RunDocket exposes:
 - `capabilities_list`
 - `operation_plan`
 - `operation_apply`
+- `operation_await`
 - `operation_status`
 - `operation_cancel`
 - `evidence_get`
@@ -98,12 +148,13 @@ must use test data rather than production user data.
 The stable agent workflow is:
 
 ```text
-inspect -> capabilities -> plan -> apply -> verify
+inspect -> capabilities -> plan -> apply -> await -> verify
 ```
 
-The first three stages are implemented. `apply`, status, cancellation, and
-evidence are implemented only for verified Expo development-server start.
-Other adapter operations remain future gates.
+The first three stages are implemented for all three adapters. `apply`, `await`,
+status, cancellation, and evidence are implemented for verified Expo start,
+build, launch, and test. Native Apple and Flutter execution remains a future
+gate; their plans already declare a completion contract.
 
 - [Inspect contract](docs/inspect-contract.md)
 - [Doctor contract](docs/doctor-contract.md)
