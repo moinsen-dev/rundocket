@@ -1,6 +1,6 @@
 {
   "name": "rundocket",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI-first, framework-adaptive execution layer for app development.",
   "license": "MIT",
   "author": "Ulrich Diedrichsen <uli@moinsen.dev>",
@@ -42,6 +42,7 @@
   "files": [
     "dist/src/",
     "docs/",
+    "skills/",
     "README.md",
     "LICENSE"
   ],

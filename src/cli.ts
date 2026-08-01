@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { access } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { doctorWorkspace, formatDoctorResult } from "./doctor.js";
@@ -50,6 +53,9 @@ async function main(): Promise<void> {
       return;
     case "mcp":
       runMcp(argv.slice(1));
+      return;
+    case "skill":
+      await runSkill(argv.slice(1));
       return;
     default:
       throw new UsageError(`Unknown command: ${command}`);
@@ -244,6 +250,38 @@ function runMcp(args: string[]): void {
   serveRunDocketMcp();
 }
 
+/**
+ * Reports where the bundled Agent Skill lives so that it can be installed from
+ * the same artifact as the CLI. RunDocket deliberately does not install it
+ * itself: agent directory conventions belong to the installer, not to a
+ * framework-neutral execution contract.
+ */
+async function runSkill(args: string[]): Promise<void> {
+  if (args.includes("--help") || args.includes("-h")) {
+    process.stdout.write(`${skillHelpText()}\n`);
+    return;
+  }
+  const [subcommand, ...rest] = args;
+  if (subcommand !== "path") {
+    throw new UsageError("skill accepts one subcommand: path");
+  }
+  if (rest.length > 0) {
+    throw new UsageError("skill path does not accept arguments.");
+  }
+
+  const skillRoot = path.resolve(
+    fileURLToPath(new URL("../../skills/rundocket", import.meta.url)),
+  );
+  try {
+    await access(path.join(skillRoot, "SKILL.md"));
+  } catch {
+    throw new UsageError(
+      `No bundled Agent Skill found at ${skillRoot}. Install rundocket from npm or a built source checkout.`,
+    );
+  }
+  process.stdout.write(`${skillRoot}\n`);
+}
+
 function writeResult(
   value: unknown,
   formatted: string,
@@ -299,6 +337,7 @@ Usage:
   rundocket doctor [path] [--json] [--project <id>]
   rundocket plan <start|build|test|launch|logs> [path] [options]
   rundocket mcp
+  rundocket skill path
   rundocket --version
   rundocket --help
 
@@ -307,9 +346,23 @@ Implemented:
   doctor     Read-only toolchain, provider, server, and device readiness
   plan       Immutable, source-bound operation plans without execution
   mcp        Headless stdio MCP server
+  skill      Locate the bundled Agent Skill for installation
 
 Default-deny:
   unverified apply operations, signing, upload, store submission, and release`;
+}
+
+function skillHelpText(): string {
+  return `Usage:
+  rundocket skill path
+
+Prints the absolute path of the Agent Skill shipped with this RunDocket
+version, so the skill and the CLI never drift apart:
+
+  npx skills add "$(rundocket skill path)" -g -a claude-code -y
+
+Options:
+  -h, --help          Show this help`;
 }
 
 function inspectHelpText(): string {

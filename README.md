@@ -45,45 +45,58 @@ a polling loop, and silence is never read as success.
 Requirements: Node.js 22 or newer.
 
 ```bash
-npm install
-npm run check
-npm run build
+npm install -g rundocket
 
-node dist/src/cli.js inspect /path/to/app --json
-node dist/src/cli.js doctor /path/to/app --json
-node dist/src/cli.js plan start /path/to/app --port 8090 --json
+rundocket inspect /path/to/app --json
+rundocket doctor /path/to/app --json
+rundocket plan launch /path/to/app --platform ios --device-id <udid>
 ```
 
-The installed command surface is:
+The command surface is:
 
 ```text
 rundocket inspect [path] [--json]
 rundocket doctor [path] [--json] [--project <id>]
 rundocket plan <start|build|test|launch|logs> [path] [options]
+rundocket skill path
 rundocket mcp
 rundocket-mcp
+```
+
+From a source checkout instead:
+
+```bash
+npm install
+npm run check
+npm run build
+node dist/src/cli.js inspect /path/to/app --json
 ```
 
 ## Agent Skill
 
 RunDocket includes a portable Agent Skill for coding agents that support the
-open Agent Skills format. Inspect the available skills without installing:
+open Agent Skills format. The skill ships inside the npm package, so installing
+it from the CLI's own path keeps the workflow instructions and the contract they
+describe on the same version:
+
+```bash
+npx skills add "$(rundocket skill path)" -g -a claude-code -y
+```
+
+Repeat with `-a codex` or any other supported agent; the installer accepts one
+agent per invocation.
+
+Without a local installation, the skill can also be taken straight from the
+repository:
 
 ```bash
 npx skills add moinsen-dev/rundocket --list
-```
-
-Install the RunDocket skill interactively:
-
-```bash
 npx skills add moinsen-dev/rundocket --skill rundocket
 ```
 
-For a non-interactive global Codex installation:
-
-```bash
-npx skills add moinsen-dev/rundocket --skill rundocket -g -a codex -y
-```
+RunDocket does not install the skill itself. Agent directory conventions belong
+to the installer; encoding them here would tie a framework-neutral execution
+contract to a list of agent runtimes.
 
 The skill is a thin, model-neutral workflow over RunDocket; it does not bundle
 or silently install the CLI. It resolves a project-local or `PATH` executable,
