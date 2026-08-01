@@ -1,11 +1,22 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
+import { RUNDOCKET_VERSION } from "../src/index.js";
+
 const FIXTURES = path.join(process.cwd(), "test", "fixtures");
+
+test("the reported version matches the published package version", async () => {
+  const manifest = JSON.parse(
+    await readFile(path.join(process.cwd(), "package.json"), "utf8"),
+  ) as { version: string };
+
+  assert.equal(RUNDOCKET_VERSION, manifest.version);
+});
 
 test("modern MCP client discovers tools and calls the shared core", async () => {
   const transport = new StdioClientTransport({

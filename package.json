@@ -1,9 +1,29 @@
 {
   "name": "rundocket",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "AI-first, framework-adaptive execution layer for app development.",
   "license": "MIT",
-  "private": true,
+  "author": "Ulrich Diedrichsen <uli@moinsen.dev>",
+  "homepage": "https://github.com/moinsen-dev/rundocket#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moinsen-dev/rundocket.git"
+  },
+  "bugs": {
+    "url": "https://github.com/moinsen-dev/rundocket/issues"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "mcp",
+    "expo",
+    "flutter",
+    "xcode",
+    "ios",
+    "build",
+    "cli",
+    "agent-skills"
+  ],
   "type": "module",
   "bin": {
     "rundocket": "./dist/src/cli.js",
@@ -21,7 +41,9 @@
   },
   "files": [
     "dist/src/",
-    "README.md"
+    "docs/",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22.0.0"
@@ -32,7 +54,8 @@
     "test": "npm run build && node --test dist/test/*.test.js",
     "mcp": "npm run build && node dist/src/mcp-cli.js",
     "smoke": "npm run build && node dist/src/cli.js inspect test/fixtures/expo-managed --json",
-    "check": "npm run typecheck && npm test && npm run smoke"
+    "check": "npm run typecheck && npm test && npm run smoke",
+    "prepublishOnly": "npm run check"
   },
   "devDependencies": {
     "@types/node": "22.20.1",
